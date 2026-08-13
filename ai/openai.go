@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"io"
 	"net/http"
 	"os"
 )
@@ -72,4 +73,31 @@ func (p *OpenAIProvider) GenerateCommitMessage(diff string) (string, error) {
 
 	req.Header.Set("Authorization", "Bearer "+p.apiKey)
 	req.Header.Set("Content-Type", "application/json")
+
+	client := &http.Client{}
+	resp, err := client.Do(req)
+	if err != nil {
+		return "", fmt.Errorf("erro ao chamar API da OpenAI: %w", err)
+	}
+	defer resp.Body.Close()
+
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return "", fmt.Errorf("erro ao ler resposta: %w", err)
+	}
+
+	if resp.StatusCode != http.StatusOK {
+		return "", fmt.Errorf("API retornou status %d: %s", resp.StatusCode, string(body))
+	}
+
+	var apiResp openAiResponse
+	if err := json.Unmarshal(body, &apiResp); err != nil {
+		return "", fmt.Errorf("erro ao interpretar resposta: %w", err)
+	}
+
+	if len(apiResp.Choises) == 0 {
+		return "", fmt.Errorf("resposta da API sem conteudo")
+	}
+
+	return apiResp.Choises[0].Message.Content, nil
 }
