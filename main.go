@@ -2,6 +2,7 @@ package main
 
 import (
 	"bufio"
+	"flag"
 	"fmt"
 	"os"
 	"os/exec"
@@ -13,19 +14,20 @@ import (
 )
 
 func main() {
+	providerName := flag.String("provider", "anthropic", "provider de IA a usar (anthropic, openai, deepseek)")
+	flag.Parse()
+
 	diff, err := git.GetStagedDiff()
 	if err != nil {
 		fmt.Println(err)
 		os.Exit(1)
 	}
 
-	AnthropicProvider, err := ai.NewAnthropicProvider()
+	provider, err := ai.NewProvider(*providerName)
 	if err != nil {
 		fmt.Println(err)
 		os.Exit(1)
 	}
-
-	var provider ai.Provider = AnthropicProvider
 
 	for {
 		fmt.Println("Analisando mudanças...")
